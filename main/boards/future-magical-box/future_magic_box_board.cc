@@ -1,5 +1,4 @@
 #include "wifi_board.h"
-#include "audio_codecs/box_audio_codec.h"
 #include "future_magic_box_audio_codec.h"
 #include "esp_lcd_panel_rgb.h"
 #include "display/lcd_display.h"
@@ -8,12 +7,10 @@
 #include "esp_io_expander_tca9554.h"
 #include "esp_lcd_touch_ft5x06.h"
 #include "esp_lcd_st7701.h"
-#include "font_awesome_symbols.h"
 #include "application.h"
 #include "button.h"
 #include "config.h"
-#include "iot/thing_manager.h"
-
+#include "mcp_server.h"
 #include <esp_log.h>
 #include <esp_lcd_panel_vendor.h>
 #include <driver/i2c_master.h>
@@ -213,16 +210,8 @@ private:
 #endif
 
         display_ = new RgbLcdDisplay(panel_io, panel_handle,
-        DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
-        {
-            .text_font = &font_puhui_20_4,
-            .icon_font = &font_awesome_20_4,
-            #if CONFIG_USE_WECHAT_MESSAGE_STYLE
-                .emoji_font = DISPLAY_HEIGHT >= 240 ? font_emoji_64_init() : font_emoji_32_init(),
-            #else
-                .emoji_font = DISPLAY_HEIGHT >= 240 ? font_emoji_64_init() : font_emoji_32_init(),
-            #endif
-        });
+                                  DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X,
+                                  DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }
 
     void InitializeTouch()
@@ -261,19 +250,24 @@ private:
         lvgl_port_add_touch(&touch_cfg);
     }
 
-    // 物联网初始化，添加对 AI 可见设备
-    void InitializeIot() {
-        auto& thing_manager = iot::ThingManager::GetInstance();
-        thing_manager.AddThing(iot::CreateThing("Speaker"));
-        thing_manager.AddThing(iot::CreateThing("Screen"));
+    // 初始化工具
+    void InitializeTools() {
+        auto &mcp_server = McpServer::GetInstance();
+        mcp_server.AddTool("self.system.reconfigure_wifi",
+            "Reboot the device and enter WiFi configuration mode.\n"
+            "**CAUTION** You must ask the user to confirm this action.",
+            PropertyList(), [this](const PropertyList& properties) {
+                ResetWifiConfiguration();
+                return true;
+            });
     }
 
 public:
     MagicBox() : boot_button_(BOOT_BUTTON_GPIO) {
         InitializeI2c();
         InitializeST7701Display();
-        InitializeTouch();
-        InitializeIot();
+        // InitializeTouch();
+        InitializeTools();
         GetBacklight()->RestoreBrightness(); 
     }
 

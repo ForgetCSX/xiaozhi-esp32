@@ -1,7 +1,7 @@
 #ifndef COSTOM_AUDIO_CODEC_H
 #define COSTOM_AUDIO_CODEC_H
 
-#include "audio_codecs/box_audio_codec.h"
+#include "audio/codecs/box_audio_codec.h"
 #include "esp_io_expander.h"
 #include "config.h"
 
